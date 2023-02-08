@@ -1,5 +1,7 @@
 # ARTL APP
 
+![ARTL Logo](./assets/logo.png?raw=true)
+
 The mobile application for project ARTL. **Augmented Real-time Translating Lens (ARTL)** is a senior project starting from Fall 2022, and expected to be finished at the end of Winter 2023.
 
 | Team Member        | Position        |
