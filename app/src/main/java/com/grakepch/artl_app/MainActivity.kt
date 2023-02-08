@@ -1,12 +1,16 @@
 package com.grakepch.artl_app
 
 import android.Manifest
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Matrix
 import android.graphics.Rect
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import android.widget.Toast
@@ -14,6 +18,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -60,6 +65,11 @@ class MainActivity : ComponentActivity() {
 
     private var PhoneCameraMode = mutableStateOf(false)
 
+    // BlueTooth
+    private lateinit var bluetoothManager: BluetoothManager
+    private var bluetoothAdapter: BluetoothAdapter? = null
+    private val REQUEST_ENABLE_BT: Int = 0;
+
     // Request Camera Permission
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -91,6 +101,65 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun requestBlueTooth() {
+        println("Start Bluetooth")
+        bluetoothManager =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                getSystemService(BluetoothManager::class.java)
+            } else {
+                TODO("VERSION.SDK_INT < M")
+            }
+        bluetoothAdapter = bluetoothManager.adapter
+        if (bluetoothAdapter == null) {
+            // Device doesn't support Bluetooth
+            println("Bluetooth not support")
+        }
+        if (bluetoothAdapter?.isEnabled == false) {
+            println("Bluetooth enabled")
+            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            if (ActivityCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.BLUETOOTH_CONNECT
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.BLUETOOTH_CONNECT), REQUEST_ENABLE_BT
+                )
+            }
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
+            println("CODE$REQUEST_ENABLE_BT")
+        }
+    }
+
+    private fun queryPairedDevice() {
+        var pairedDevices: Set<BluetoothDevice>? = null
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.BLUETOOTH_CONNECT), REQUEST_ENABLE_BT
+            )
+        }
+        pairedDevices = bluetoothAdapter?.bondedDevices
+        println("Connected devices: ${pairedDevices?.size}")
+        pairedDevices?.forEach { device ->
+            val deviceName = device.name
+            val deviceHardwareAddress = device.address // MAC address
+            println("$deviceName $deviceHardwareAddress")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -103,6 +172,8 @@ class MainActivity : ComponentActivity() {
             .addOnSuccessListener { translatorReady = true }
             .addOnFailureListener { exception -> showToast(exception.toString()) }
 
+        requestBlueTooth()
+        queryPairedDevice()
         requestCameraPermission()
         outputDirectory = getOutputDirectory()
         cameraExecutor = Executors.newSingleThreadExecutor()
