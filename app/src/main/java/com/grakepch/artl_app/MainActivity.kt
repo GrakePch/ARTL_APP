@@ -4,6 +4,7 @@ import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothServerSocket
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -35,6 +36,7 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.grakepch.artl_app.camera.CameraView
 import com.grakepch.artl_app.ui.theme.ARTL_APPTheme
 import java.io.File
+import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.math.pow
@@ -152,12 +154,14 @@ class MainActivity : ComponentActivity() {
             )
         }
         pairedDevices = bluetoothAdapter?.bondedDevices
-        println("Connected devices: ${pairedDevices?.size}")
+        println("Paired devices: ${pairedDevices?.size}")
         pairedDevices?.forEach { device ->
             val deviceName = device.name
             val deviceHardwareAddress = device.address // MAC address
             println("$deviceName $deviceHardwareAddress")
         }
+        val mmServerSocket: BluetoothServerSocket? =
+            bluetoothAdapter?.listenUsingInsecureRfcommWithServiceRecord("ARTL", UUID.fromString("b850c51d-fb45-4bd7-9161-01923ce65526"))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
