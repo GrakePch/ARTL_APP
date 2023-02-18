@@ -146,8 +146,8 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    var pairedDevices: Set<BluetoothDevice>? = null;
     private fun queryPairedDevice() {
-        var pairedDevices: Set<BluetoothDevice>? = null
         if (ActivityCompat.checkSelfPermission(
                 this,
                 Manifest.permission.BLUETOOTH_CONNECT
@@ -169,8 +169,34 @@ class MainActivity : ComponentActivity() {
             bluetoothAdapter?.listenUsingInsecureRfcommWithServiceRecord("ARTL", UUID.fromString("b850c51d-fb45-4bd7-9161-01923ce65526"))
     }
 
+    private fun pairFirstDevice() {
+        if (pairedDevices?.isEmpty() == true) return
+
+        val device: BluetoothDevice = pairedDevices!!.iterator().next();
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return
+        }
+        showToast(device.name)
+        val connect = ConnectThread(device, MY_UUID_INSECURE!!, this)
+
+        connect.start()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // println("===Run Here===")
 
         // Create a translator:
         translator = Translation.getClient(
@@ -226,7 +252,13 @@ class MainActivity : ComponentActivity() {
                     },
                     modeToggle = {
                         PhoneCameraMode.value = !PhoneCameraMode.value
-                    }
+                    },
+//                    pairDevice = {println("p")},
+//                    startServer = {println("p")},
+//                    sendMessage = {println("p")}
+                    pairDevice = ::pairFirstDevice,
+                    startServer = ::startServer,
+                    sendMessage = ::sendMessage
                 )
             }
         }
@@ -372,13 +404,14 @@ class MainActivity : ComponentActivity() {
     var send_data: EditText? = null
     var view_data: TextView? = null
     var messages: StringBuilder? = null
-    inner class ConnectThread(device: BluetoothDevice, uuid: UUID) : Thread() {
+    inner class ConnectThread(device: BluetoothDevice, uuid: UUID, mainActivity: MainActivity) : Thread() {
         private var mmSocket: BluetoothSocket? = null
-
+        private var mainActivity: MainActivity;
         init {
             Log.d(TAG, "ConnectThread: started.")
             mmDevice = device
             deviceUUID = uuid
+            this.mainActivity = mainActivity
         }
 
         override fun run() {
@@ -392,7 +425,22 @@ class MainActivity : ComponentActivity() {
                     TAG, "ConnectThread: Trying to create InsecureRfcommSocket using UUID: "
                             + MY_UUID_INSECURE
                 )
-                tmp = mmDevice.createRfcommSocketToServiceRecord(MY_UUID_INSECURE)
+
+                if (ActivityCompat.checkSelfPermission(
+                        mainActivity,
+                        Manifest.permission.BLUETOOTH_CONNECT
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    // TODO: Consider calling
+                    //    ActivityCompat#requestPermissions
+                    // here to request the missing permissions, and then overriding
+                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                    //                                          int[] grantResults)
+                    // to handle the case where the user grants the permission. See the documentation
+                    // for ActivityCompat#requestPermissions for more details.
+                    return
+                }
+                tmp = mmDevice?.createRfcommSocketToServiceRecord(MY_UUID_INSECURE)
             } catch (e: IOException) {
                 Log.e(TAG, "ConnectThread: Could not create InsecureRfcommSocket " + e.message)
             }
@@ -498,7 +546,7 @@ class MainActivity : ComponentActivity() {
     }
 
 
-    fun SendMessage(v: View?) {
+    private fun sendMessage() {
         val bytes: ByteArray = send_data?.text.toString().toByteArray(Charset.defaultCharset())
         mConnectedThread?.write(bytes)
     }
@@ -515,20 +563,36 @@ class MainActivity : ComponentActivity() {
 //        }
 //    }
 
-    fun Start_Server(view: View?) {
-        val accept = AcceptThread()
+    private fun startServer() {
+        val accept = AcceptThread(this)
         accept.start()
     }
 
-    inner class AcceptThread : Thread() {
+    inner class AcceptThread(mainActivity: MainActivity) : Thread() {
         // The local server socket
         private val mmServerSocket: BluetoothServerSocket?
+        private val mainActivity: MainActivity
 
         init {
             var tmp: BluetoothServerSocket? = null
+            this.mainActivity = mainActivity
 
             // Create a new listening server socket
             try {
+                if (ActivityCompat.checkSelfPermission(
+                        mainActivity,
+                        Manifest.permission.BLUETOOTH_CONNECT
+                    ) != PackageManager.PERMISSION_GRANTED
+                ) {
+                    // TODO: Consider calling
+                    //    ActivityCompat#requestPermissions
+                    // here to request the missing permissions, and then overriding
+                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                    //                                          int[] grantResults)
+                    // to handle the case where the user grants the permission. See the documentation
+                    // for ActivityCompat#requestPermissions for more details.
+                    showToast("No Permission")
+                }
                 tmp = bluetoothAdapter?.listenUsingInsecureRfcommWithServiceRecord(
                     "appname",
                     MY_UUID_INSECURE
@@ -553,7 +617,6 @@ class MainActivity : ComponentActivity() {
                 Log.e(TAG, "AcceptThread: IOException: " + e.message)
             }
 
-            //talk about this is in the 3rd
             socket?.let { connected(it) }
             Log.i(TAG, "END mAcceptThread ")
         }

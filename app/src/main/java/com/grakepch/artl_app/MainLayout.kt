@@ -29,6 +29,9 @@ fun MainLayout(
     isCameraShown: MutableState<Boolean>,
     createCameraView: @Composable() () -> Unit,
     modeToggle: () -> Unit,
+    pairDevice: () -> Unit,
+    startServer: () -> Unit,
+    sendMessage: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
@@ -87,6 +90,23 @@ fun MainLayout(
                         modifier = Modifier.weight(1f)
                     ) { Text(if (isCameraShown.value) "Camera Mode" else "File Mode") }
                 }
+
+                Row {
+                    Button(
+                        onClick = pairDevice,
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Pair Device")}
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = startServer,
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Run Server")}
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = sendMessage,
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Send")}
+                }
             }
         }
     }
@@ -107,7 +127,10 @@ fun DefaultPreview() {
             selectedLang = remember { mutableStateOf("zh") },
             isCameraShown = remember { mutableStateOf(false) },
             createCameraView = {},
-            modeToggle = {}
+            modeToggle = {},
+            pairDevice = {},
+            startServer = {},
+            sendMessage = {}
         )
     }
 }
