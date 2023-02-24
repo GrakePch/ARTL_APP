@@ -1,5 +1,6 @@
 package com.grakepch.artl_app
 
+import android.bluetooth.BluetoothDevice
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -29,9 +30,11 @@ fun MainLayout(
     isCameraShown: MutableState<Boolean>,
     createCameraView: @Composable() () -> Unit,
     modeToggle: () -> Unit,
-    pairDevice: () -> Unit,
+    pairDevice: (String) -> Unit,
     startServer: () -> Unit,
-    sendMessage: () -> Unit
+    sendMessage: () -> Unit,
+    isPairedDevicesShown: MutableState<Boolean>,
+    listPairedDevices: List<String>
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background
@@ -92,20 +95,31 @@ fun MainLayout(
                 }
 
                 Row {
-                    Button(
-                        onClick = pairDevice,
-                        modifier = Modifier.weight(1f)
-                    ) { Text("Pair Device")}
+                    Box(modifier = Modifier.weight(1f)) {
+                        Button(
+                            onClick = {
+                                isPairedDevicesShown.value = true
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Pair Device") }
+                        DropdownMenu(
+                            expanded = isPairedDevicesShown.value,
+                            onDismissRequest = { isPairedDevicesShown.value = false }) {
+                            listPairedDevices.forEach { item ->
+                                DropdownMenuItem(text = { Text(item) }, onClick = { pairDevice(item) })
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = startServer,
                         modifier = Modifier.weight(1f)
-                    ) { Text("Run Server")}
+                    ) { Text("Run Server") }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
                         onClick = sendMessage,
                         modifier = Modifier.weight(1f)
-                    ) { Text("Send")}
+                    ) { Text("Send") }
                 }
             }
         }
@@ -130,7 +144,9 @@ fun DefaultPreview() {
             modeToggle = {},
             pairDevice = {},
             startServer = {},
-            sendMessage = {}
+            sendMessage = {},
+            isPairedDevicesShown = remember { mutableStateOf(false) },
+            listPairedDevices = listOf(),
         )
     }
 }
